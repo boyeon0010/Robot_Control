@@ -1,8 +1,10 @@
 import asyncio
 import keyboard
+import time
 from robomaster import robot
+from robomaster import camera
 
-file_path = 'key_inputs.txt'
+# file_path = 'key_inputs.txt'
 
 class Keymanager:
     def __init__(self, ep_robot):
@@ -13,10 +15,10 @@ class Keymanager:
     async def AxisControl(self, key):
         # Define body movement based on key
         body_movement = {
-            'w': (0.5, 0, 0),
-            's': (-0.5, 0, 0),
-            'a': (0, -0.5, 0),
-            'd': (0, 0.5, 0),
+            'w': (0.3, 0, 0),
+            's': (-0.3, 0, 0),
+            'a': (0, -0.3, 0),
+            'd': (0, 0.3, 0),
             'q': (0, 0, 45),
             'e': (0, 0, -45)
         }
@@ -42,8 +44,12 @@ class Keymanager:
             key = keyboard.read_event().name
             print(f"select key {key}")
             # file.write(key + '\n')
-            if key == "1":
+            if key == "1" or key == "esc":
                 print("Exit, Bye!")
+                # Stop camera stream
+                ep_camera.stop_video_stream()
+
+                ep_robot.close()
                 break
             else:
                 await self.AxisControl(key)
@@ -52,8 +58,19 @@ if __name__ == '__main__':
     ep_robot = robot.Robot()
     ep_robot.initialize(conn_type="sta", sn="3JKCK980030EKR")
 
+    # Start camera stream
+    ep_camera = ep_robot.camera
+    ep_camera.start_video_stream(display=True, resolution=camera.STREAM_360P)
+
     keymanager = Keymanager(ep_robot)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(keymanager._setAxis())
+    try:
+        loop.run_until_complete(keymanager._setAxis())
+    except KeyboardInterrupt:
+        print("Ctrl+C pressed. Exiting...")
+
+
+    # Stop camera stream
+    ep_camera.stop_video_stream()
 
     ep_robot.close()
